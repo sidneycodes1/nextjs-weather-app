@@ -7,6 +7,7 @@ import {
 } from "@/actions/weather";
 import Header from "@/components/header/header";
 import Sidebar from "@/components/sidebar/sidebar";
+import { LocationWrapper } from "@/components/location-wrapper";
 import TemperatureCard from "@/components/weather/temperature-card";
 import { DEFAULT_WEATHER_UNITS, WeatherUnits } from "@/types/weather-units";
 import { cookies } from "next/headers";
@@ -43,9 +44,9 @@ import TenDayForecastCard from "@/components/weather/ten-day-forecast-card";
 import Map from "@/components/weather/map";
 import HourlyForecastCard from "@/components/weather/hourly-forecast-card";
 
-// Cupertino, CA
-const DEFAULT_LAT = 37.319321;
-const DEFAULT_LON = -122.029283;
+// Abuja, Nigeria
+const DEFAULT_LAT = 9.0643305;
+const DEFAULT_LON = 7.4892974;
 
 const FORECAST_HOURS = 24;
 const FORECAST_DAYS = 10;
@@ -111,6 +112,7 @@ export default async function Home({
       <Sidebar defaultOpen={sidebarOpen} temperatureUnit={units.temperature} />
 
       <div className="@container flex min-h-0 flex-1 flex-col overflow-y-auto p-3 md:pl-0">
+        <LocationWrapper />
         <Header />
 
         <motion.main

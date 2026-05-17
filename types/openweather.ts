@@ -146,6 +146,46 @@ export interface OpenWeatherHourlyForecast4DaysResponse {
   city: OpenWeatherHourlyForecastCity;
 }
 
+export interface OpenWeather3HourForecastListItem {
+  dt: number;
+  main: {
+    temp: number;
+    feels_like: number;
+    temp_min: number;
+    temp_max: number;
+    pressure: number;
+    sea_level?: number;
+    grnd_level?: number;
+    humidity: number;
+    temp_kf?: number;
+  };
+  weather: OpenWeatherWeatherCondition[];
+  clouds: OpenWeatherClouds;
+  wind: OpenWeatherWind;
+  visibility?: number;
+  pop: number;
+  rain?: {
+    "1h"?: number;
+    "3h"?: number;
+  };
+  snow?: {
+    "1h"?: number;
+    "3h"?: number;
+  };
+  sys: {
+    pod: "d" | "n";
+  };
+  dt_txt: string;
+}
+
+export interface OpenWeather3HourForecastResponse {
+  cod: string;
+  message: number;
+  cnt: number;
+  list: OpenWeather3HourForecastListItem[];
+  city: OpenWeatherHourlyForecastCity;
+}
+
 /**
  * OpenWeather Air Pollution API
  */

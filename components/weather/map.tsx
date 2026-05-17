@@ -1,149 +1,58 @@
-"use client";
+﻿"use client";
 
-import { useEffect, useRef, useState } from "react";
-import mapboxgl from "mapbox-gl";
-import { Layers2 } from "lucide-react";
-import { Button } from "../ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { OpenWeatherWeatherMapLayer } from "@/types/openweather";
+import { useEffect } from "react";
+import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 
-const MAPBOX_ACCESS_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+const markerIcon = L.icon({
+  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+  iconUrl: "/leaflet/marker-icon.png",
+  shadowUrl: "/leaflet/marker-shadow.png",
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
-const DEFAULT_LAYER = "precipitation_new";
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: "/leaflet/marker-icon-2x.png",
+  iconUrl: "/leaflet/marker-icon.png",
+  shadowUrl: "/leaflet/marker-shadow.png",
+});
 
-const WEATHER_MAP_LAYERS: {
-  value: OpenWeatherWeatherMapLayer;
-  label: string;
-}[] = [
-  { value: "precipitation_new", label: "Precipitation" },
-  { value: "clouds_new", label: "Clouds" },
-  { value: "pressure_new", label: "Pressure" },
-  { value: "wind_new", label: "Wind Speed" },
-  { value: "temp_new", label: "Temperature" },
-];
+function RecenterMap({ lat, lon }: { lat: number; lon: number }) {
+  const map = useMap();
 
-function addWeatherLayer(map: mapboxgl.Map, layer: OpenWeatherWeatherMapLayer) {
-  if (map.getSource("openweather-tiles")) {
-    map.removeLayer("openweather-layer");
-    map.removeSource("openweather-tiles");
-  }
-  map.addSource("openweather-tiles", {
-    type: "raster",
-    tiles: [`/api/weather/${layer}/{z}/{x}/{y}`],
-    tileSize: 256,
-  });
-  map.addLayer({
-    id: "openweather-layer",
-    type: "raster",
-    source: "openweather-tiles",
-    paint: {
-      "raster-opacity": 0.8,
-      "raster-saturation": 1, // >1 = more saturated (default 1)
-      "raster-brightness-min": 0.15, // lifts shadows so colors pop on white
-      "raster-brightness-max": 1, // slight highlight boost
-      "raster-contrast": 1, // more separation from base map
-    },
-  });
+  useEffect(() => {
+    map.setView([lat, lon], map.getZoom());
+  }, [lat, lon, map]);
+
+  return null;
 }
 
 export default function Map({ lat, lon }: { lat: number; lon: number }) {
-  const [layer, setLayer] = useState<OpenWeatherWeatherMapLayer>(DEFAULT_LAYER);
-
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const mapContainerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const token = MAPBOX_ACCESS_TOKEN;
-    if (!token) {
-      console.error("Mapbox API key is missing.");
-      return;
-    }
-
-    if (!mapContainerRef.current) return;
-
-    mapboxgl.accessToken = token;
-
-    const map = new mapboxgl.Map({
-      container: mapContainerRef.current,
-      style: "mapbox://styles/mapbox/light-v11",
-      center: [lon, lat],
-      zoom: 5,
-      maxTileCacheSize: 100,
-      refreshExpiredTiles: false,
-    });
-
-    mapRef.current = map;
-
-    // Add navigation controls
-    map.addControl(new mapboxgl.NavigationControl(), "top-right");
-
-    // Add a weather layer
-    map.on("load", () => {
-      addWeatherLayer(map, DEFAULT_LAYER);
-    });
-
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
-  }, []);
-
-  /**
-   * Fly to the map to the center of the map when the lat and lon state changes
-   */
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    const center = map.getCenter();
-    if (center.lng === lon && center.lat === lat) return;
-    map.flyTo({ center: [lon, lat], zoom: 5 });
-  }, [lat, lon]);
-
-  /**
-   * Update weather layer when layer state changes, no re-render of the map component
-   */
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !map.getSource("openweather-tiles")) return;
-    addWeatherLayer(map, layer);
-  }, [layer]);
-
   return (
-    <div className="relative size-full">
-      <div
-        ref={mapContainerRef}
-        className="absolute inset-0 size-full rounded-xl"
-      />
-
-      {/* Layer toggle button */}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              size={"icon"}
-              aria-label="Change weather layer"
-              className="text-primary outline-accent hover:bg-muted absolute top-2.5 right-12 size-[29px] rounded-sm bg-white shadow-[0_0_0_1px_#0000001a] dark:bg-white dark:text-black [&_svg:not([class*='size-'])]:size-4"
-            >
-              <Layers2 strokeWidth={3} />
-            </Button>
-          }
+    <div className="relative h-full w-full rounded-xl overflow-hidden">
+      <MapContainer
+        center={[lat, lon]}
+        zoom={6}
+        scrollWheelZoom={false}
+        className="h-full w-full"
+      >
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
-        <DropdownMenuContent align="end" side="bottom" className="w-34">
-          <DropdownMenuRadioGroup value={layer} onValueChange={setLayer}>
-            {WEATHER_MAP_LAYERS.map((l) => (
-              <DropdownMenuRadioItem key={l.value} value={l.value}>
-                {l.label}
-              </DropdownMenuRadioItem>
-            ))}
-          </DropdownMenuRadioGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
+        <TileLayer
+          attribution='&copy; <a href="https://openweathermap.org/">OpenWeatherMap</a>'
+          url="/api/weather/precipitation_new/{z}/{x}/{y}"
+          opacity={0.6}
+        />
+        <Marker position={[lat, lon]} icon={markerIcon} />
+        <RecenterMap lat={lat} lon={lon} />
+      </MapContainer>
     </div>
   );
 }

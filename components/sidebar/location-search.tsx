@@ -2,16 +2,12 @@
 
 import { Search } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type {
-  GeocodingResponse,
-  GeocodingFeature,
-} from "@mapbox/search-js-core";
+import type { GeocodingFeature } from "@mapbox/search-js-core";
 import useDebounce from "@/hooks/use-debounce";
 import { useRouter, useSearchParams } from "next/navigation";
 import { DEFAULT_CITIES } from "@/lib/constants/default-cities";
 import SuggestionItem from "./suggestion-item";
 
-const MAPBOX_API_KEY = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN!;
 
 export default function LocationSearch({
   onFocusChange,
@@ -43,20 +39,42 @@ export default function LocationSearch({
 
     const params = new URLSearchParams({
       q: debouncedQuery,
-      access_token: MAPBOX_API_KEY,
-      limit: "5",
-      types: "place",
+      format: "json",
+      limit: "8",
+      countrycodes: "ng",
     });
 
-    fetch(`https://api.mapbox.com/search/geocode/v6/forward?${params}`, {
+    fetch(`https://nominatim.openstreetmap.org/search?${params}`, {
       signal: controller.signal,
+      headers: {
+        "User-Agent": "WeatherPing-Nigeria/1.0",
+      },
     })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP error: ${res.status}`);
-        return res.json() as Promise<GeocodingResponse>;
+        return res.json();
       })
-      .then((data) => {
-        setSuggestions(data.features || []);
+      .then((data: Array<{ display_name: string; lat: string; lon: string; place_id?: number }>) => {
+        const features: GeocodingFeature[] = (data || []).map((item, idx) => {
+          const parts = item.display_name.split(",").map((s) => s.trim());
+          const country = parts.length ? parts[parts.length - 1] : "";
+          return {
+            id: String(item.place_id ?? `${item.lat}-${item.lon}-${idx}`),
+            type: "Feature",
+            place_type: ["place"],
+            geometry: {
+              type: "Point",
+              coordinates: [parseFloat(item.lon), parseFloat(item.lat)],
+            },
+            properties: {
+              name: parts[0] ?? item.display_name,
+              place_formatted: item.display_name,
+              context: { country: { name: country } } as any,
+            },
+          } as unknown as GeocodingFeature;
+        });
+
+        setSuggestions(features);
       })
       .catch((error) => {
         if (error.name !== "AbortError") {
@@ -96,6 +114,30 @@ export default function LocationSearch({
     onFocusChange(false);
   };
 
+  const popularCities = [
+    { name: "Lagos", lat: 6.5244, lon: 3.3792 },
+    { name: "Abuja", lat: 9.0643305, lon: 7.4892974 },
+    { name: "Kano", lat: 12.0022, lon: 8.5919 },
+    { name: "Port Harcourt", lat: 4.8156, lon: 7.0498 },
+    { name: "Ibadan", lat: 7.3775, lon: 3.9470 },
+    { name: "Benin City", lat: 6.3382, lon: 5.6258 },
+    { name: "Enugu", lat: 6.4413, lon: 7.4948 },
+    { name: "Kaduna", lat: 10.5105, lon: 7.4165 },
+    { name: "Jos", lat: 9.8965, lon: 8.8583 },
+    { name: "Warri", lat: 5.5167, lon: 5.7500 },
+  ];
+
+  const handleQuickSelect = (city: { name: string; lat: number; lon: number }) => {
+    const feature = {
+      id: `${city.name}-${city.lat}-${city.lon}`,
+      type: "Feature",
+      place_type: ["place"],
+      geometry: { type: "Point", coordinates: [city.lon, city.lat] },
+      properties: { name: city.name, place_formatted: city.name, context: { country: { name: "Nigeria" } } },
+    } as unknown as GeocodingFeature;
+    handleSelectSuggestion(feature);
+  };
+
   return (
     <div className="flex flex-col gap-2">
       <div className="relative w-full focus:outline-none">
@@ -108,13 +150,26 @@ export default function LocationSearch({
           onChange={(e) => setQuery(e.target.value)}
           onFocus={handleFocus}
           onBlur={handleBlur}
-          placeholder="Search"
+          placeholder="Search Nigerian cities..."
           className="w-full rounded-full border px-4 py-2 pl-8 text-sm focus:outline-none"
           autoComplete="off"
           autoCorrect="off"
           autoCapitalize="off"
           spellCheck="false"
         />
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {popularCities.map((c) => (
+          <button
+            key={c.name}
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => handleQuickSelect(c)}
+            className="rounded-full border px-3 py-1 text-xs hover:bg-accent"
+          >
+            {c.name}
+          </button>
+        ))}
       </div>
 
       {isFocused && (

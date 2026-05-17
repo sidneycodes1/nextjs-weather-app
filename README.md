@@ -35,6 +35,20 @@ First, create a .env.local file and add the following variables:
 ```
 NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=your_mapbox_access_token
 OPENWEATHER_API_KEY=your_openweather_api_key
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+TELEGRAM_CHAT_ID=your_telegram_chat_id
+ALERT_LAT=9.0765
+ALERT_LON=7.3986
+WIND_THRESHOLD_MS=8
+CRON_SECRET=your_random_secret_string
+```
+
+This app uses Vercel KV for alert cooldown state and protects `/api/check-weather` with a cron secret header.
+
+When configuring Vercel Cron, add a request header:
+
+```
+x-cron-secret: $CRON_SECRET
 ```
 
 Then, install dependencies:
